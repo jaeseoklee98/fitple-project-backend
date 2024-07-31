@@ -71,7 +71,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0I
 ### api요청 전 결제 정보 저장
 POST http://localhost:8080/api/pt-payments/test/save-payment
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0IjoxNzIyNDQ5NTQ0LCJleHAiOjE3MjI0NTEzNDR9.YaknYAKSwEX-cUJJm4tjozt3Txv9qC_BWwEK_tgHjKQ
 
 {
   "trainerId": 2,
@@ -80,3 +79,41 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0I
   "paymentType": "UNDEFINED",
   "amount": 100.0
 }
+
+### 결제 정보 검증 및 상태 업데이트
+PUT http://localhost:8080/api/pt-payments/test/approve/8
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0IjoxNzIyNDYwMjg1LCJleHAiOjE3MjI0NjIwODV9.hfve6aX161GQvYHskC13Z4_ZIL-elxHeymbpJpLc8LM
+
+{
+  "trainer": {
+    "id": 2,
+    "accountId": "mao123",
+    "trainerName": "노르에피네프린",
+    "trainerInfo": "일하기 싫습니다.",
+    "password": "mao123",
+    "nickname": "일하기 싫습니다.",
+    "email": "mao@naver.com",
+    "trainerStatus": "Active",
+    "trainerPhoneNumber": "010-4335-5590",
+    "role": "TRAINER"
+  },
+  "user": {
+    "id": 5,
+    "accountId": "tryptophan204",
+    "userName": "세로토닌",
+    "residentRegistrationNumber": "01011117678",
+    "email": "USER",
+    "status": "ACTIVE",
+    "zipcode": "19384",
+    "role": "USER"
+  },
+  "ptTimes": "SIXTY_TIMES",
+  "paymentType": "UNDEFINED",
+  "amount": 100.0,
+  "paymentStatus": "PENDING",
+  "paymentDate": "2024-08-01T03:18:42.404000",
+  "expiryDate": "2024-08-03T03:18:42.404772",
+  "membership": false
+}
+

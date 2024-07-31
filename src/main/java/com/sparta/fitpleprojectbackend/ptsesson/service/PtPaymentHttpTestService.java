@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class PtPaymentHttpTestService {
 
+  private static final String TEST = "testId"; // 테스트용
   private static final Logger logger = LoggerFactory.getLogger(PtPaymentService.class);
   private final PtPaymentRepository ptPaymentRepository;
   private final TrainerRepository trainerRepository;
@@ -78,7 +79,8 @@ public class PtPaymentHttpTestService {
    */
   @Transactional
   public PtInfomation savePtInformation(PtInformationRequest request) {
-    PtPaymentValidateRequest validateRequest = validateTrainerAndUser(request.getTrainerId(), request.getUserId());
+    PtPaymentValidateRequest validateRequest = validateTrainerAndUser(request.getTrainerId(),
+        request.getUserId());
 
     Trainer trainer = validateRequest.getTrainer();
     User user = validateRequest.getUser();
@@ -178,7 +180,8 @@ public class PtPaymentHttpTestService {
         throw new CustomException(ErrorType.INVALID_INPUT);
       }
 
-      PtPaymentValidateRequest validateRequest = validateTrainerAndUser(request.getTrainerId(), userId);
+      PtPaymentValidateRequest validateRequest = validateTrainerAndUser(request.getTrainerId(),
+          userId);
       Trainer trainer = validateRequest.getTrainer();
       User user = validateRequest.getUser();
 
@@ -228,12 +231,62 @@ public class PtPaymentHttpTestService {
   }
 
   /**
-   * 결제 승인 (api 연결)
+   * 결제 정보 검증 및 상태 업데이트
+   *
+   * @param paymentId 결제 ID
+   * @return 승인된 결제 정보
    */
-  public boolean approvePayment(Long userId, double amount) {
-    // 실제 결제 승인 로직 구현 필요
-    return true;
+  @Transactional
+  public PtPayment approvePayment(Long paymentId) {
+
+    PtPayment dbPayment = ptPaymentRepository.findById(paymentId)
+        .orElseThrow(() -> new CustomException(ErrorType.PAYMENT_NOT_FOUND));
+
+    // API 결제 데이터 테스트용
+    PtPayment apiPayment = new PtPayment(
+        new Trainer(),
+        new User(),
+        PtTimes.SIXTY_TIMES,
+        PaymentType.UNDEFINED,
+        100.0,
+        PaymentStatus.PENDING,
+        LocalDateTime.now().minusDays(1),
+        LocalDateTime.now().plusDays(30),
+        true
+    );
+
+    if (!dbPayment.getTrainer().equals(apiPayment.getTrainer()) ||
+        !dbPayment.getUser().equals(apiPayment.getUser()) ||
+        !dbPayment.getPtTimes().equals(apiPayment.getPtTimes()) ||
+        dbPayment.getAmount() != apiPayment.getAmount() ||
+        dbPayment.isMembership() != apiPayment.isMembership()) {
+      throw new CustomException(ErrorType.PAYMENT_MISMATCH);
+    }
+
+    return savePayment(dbPayment);
+  }
+
+
+  /**
+   * 결제 상태를 APPROVED 변경
+   *
+   * @param ptPayment 결제 정보
+   * @return 승인된 결제 정보
+   */
+  private PtPayment savePayment(PtPayment ptPayment) {
+    PtPayment savedPayment = new PtPayment(
+        ptPayment.getTrainer(),
+        ptPayment.getUser(),
+        ptPayment.getPtTimes(),
+        ptPayment.getPaymentType(),
+        ptPayment.getAmount(),
+        PaymentStatus.APPROVED,
+        ptPayment.getPaymentDate(),
+        ptPayment.getExpiryDate(),
+        ptPayment.isMembership()
+    );
+
+    return ptPaymentRepository.save(savedPayment);
   }
 }
-
 

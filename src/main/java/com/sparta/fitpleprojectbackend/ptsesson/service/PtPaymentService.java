@@ -148,7 +148,7 @@ public class PtPaymentService {
     }
 
     PtTimes ptTimes = ptTimeArray.get();
-    logger.info("선택된 PT 횟수: {}", ptTimes);
+    logger.info("선택된 PT 횟수: ", ptTimes);
 
     return ptTimes;
   }

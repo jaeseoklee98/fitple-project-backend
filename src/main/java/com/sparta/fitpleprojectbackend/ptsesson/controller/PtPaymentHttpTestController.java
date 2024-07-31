@@ -24,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -248,5 +249,19 @@ public class PtPaymentHttpTestController {
           .body(new CommonResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(),
               "결제 준비 중 오류가 발생했습니다.", null));
     }
+  }
+
+
+  /**
+   * 결제 정보 검증 및 상태 업데이트
+   *
+   * @param paymentId 결제 ID
+   * @return 승인된 결제 정보
+   */
+  @PutMapping("/approve/{paymentId}")
+  public ResponseEntity<PtPayment> approvePayment(@PathVariable Long paymentId) {
+    PtPayment approvedPayment = ptPaymentHttpTestService.approvePayment(paymentId);
+
+    return ResponseEntity.ok(approvedPayment);
   }
 }
