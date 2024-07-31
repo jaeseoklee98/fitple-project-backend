@@ -200,11 +200,16 @@ public class PtPaymentService {
   }
 
   /**
-   * 결제 수단 선택 (api 연결)
+   * 결제 승인 및 상태 업데이트
+   *
+   * @param ptPaymentId 결제 ID
+   * @param paymentType 결제 수단
+   * @return 승인된 결제 정보
    */
-  public void selectPaymentType(PaymentType paymentType) {
-    switch (paymentType) {
+  @Transactional
+  public PtPayment approvePayment(Long ptPaymentId, PaymentType paymentType) {
 
+    switch (paymentType) {
       case CREDIT_CARD:
         break;
       case DEBIT_CARD:
@@ -212,17 +217,25 @@ public class PtPaymentService {
       case CASH:
         break;
       default:
-
         throw new IllegalArgumentException("지원하지 않는 결제 수단입니다: " + paymentType);
     }
-  }
 
-  /**
-   * 결제 승인 (api 연결)
-   */
-  public boolean approvePayment(Long userId, double amount) {
+    PtPayment ptPayment = ptPaymentRepository.findById(ptPaymentId)
+        .orElseThrow(() -> new CustomException(ErrorType.PAYMENT_NOT_FOUND));
 
-    return true;
+    PtPayment approvedPayment = new PtPayment(
+        ptPayment.getTrainer(),
+        ptPayment.getUser(),
+        ptPayment.getPtTimes(),
+        ptPayment.getPaymentType(),
+        ptPayment.getAmount(),
+        PaymentStatus.APPROVED,
+        ptPayment.getPaymentDate(),
+        ptPayment.getExpiryDate(),
+        ptPayment.isMembership()
+    );
+
+    return ptPaymentRepository.save(approvedPayment);
   }
 }
 

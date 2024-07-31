@@ -51,3 +51,32 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0I
   "selectedTimes": "TEN_TIMES",
   "trainerPrice": 100000
 }
+
+### 결제 승인 및 상태 업데이트
+PUT http://localhost:8080/api/pt-payments/6?paymentType=CREDIT_CARD
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0cnlwdG9waGFuMjA0IiwiaWF0IjoxNzIyNDYyODMxLCJleHAiOjE3MjI0NjQ2MzF9.Xs8KhVYCNSe4to1maBAuocNxJLXVfKgQ53nXjBxYt0E
+
+{
+  "trainer": {
+    "id": 2,
+    "trainerName": "노르에피네프린",
+    "email": "mao@naver.com",
+    "trainerStatus": "Active",
+    "phoneNumber": "010-4335-5590"
+  },
+  "user": {
+    "id": 5,
+    "userName": "세로토닌",
+    "email": "USER",
+    "status": "ACTIVE",
+    "zipcode": "19384"
+  },
+  "ptTimes": "SIXTY_TIMES",
+  "paymentType": "CREDIT_CARD",
+  "amount": 100.0,
+  "paymentStatus": "APPROVED",
+  "paymentDate": "2024-08-01 03:18:42.404000",
+  "expiryDate": "2024-08-03 03:18:42.404772",
+  "membership": true
+}

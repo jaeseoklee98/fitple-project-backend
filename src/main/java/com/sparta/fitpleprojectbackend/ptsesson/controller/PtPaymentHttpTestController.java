@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -238,7 +239,6 @@ public class PtPaymentHttpTestController {
 
     } catch (CustomException e) {
 
-
       return ResponseEntity.status(e.getErrorType().getHttpStatus())
           .body(new CommonResponse<>(e.getErrorType().getHttpStatus().value(),
               e.getErrorType().getMessage(), null));
@@ -251,17 +251,117 @@ public class PtPaymentHttpTestController {
     }
   }
 
+//  /**
+//   * 결제 정보 검증 및 상태 업데이트
+//   *
+//   * @param paymentId 결제 ID
+//   * @return 승인된 결제 정보
+//   */
+//  @PutMapping("/approve/{paymentId}")
+//  public ResponseEntity<PtPayment> approvePayment(@PathVariable Long paymentId) {
+//    PtPayment approvedPayment = ptPaymentHttpTestService.approvePayment(paymentId);
+//
+//    return ResponseEntity.ok(approvedPayment);
+//  }
 
   /**
-   * 결제 정보 검증 및 상태 업데이트
+   * 결제를 완료하고 최종 결제 정보를 저장
    *
-   * @param paymentId 결제 ID
-   * @return 승인된 결제 정보
+   * @param request 결제 요청 정보
+   * @param userId  유저 ID
+   * @return 저장된 결제 정보
+   * @throws CustomException 결제 처리 중 오류 발생 시
    */
-  @PutMapping("/approve/{paymentId}")
-  public ResponseEntity<PtPayment> approvePayment(@PathVariable Long paymentId) {
-    PtPayment approvedPayment = ptPaymentHttpTestService.approvePayment(paymentId);
+  @PostMapping("/complete")
+  public ResponseEntity<PtPayment> completePayment(@RequestBody PtPaymentRequest request,
+      @RequestParam Long userId) {
+    try {
+      PtPayment ptPayment = ptPaymentHttpTestService.completePayment(request, userId);
+      return ResponseEntity.ok(ptPayment);
+    } catch (CustomException e) {
 
-    return ResponseEntity.ok(approvedPayment);
+      return ResponseEntity.status(e.getErrorType().getHttpStatus()).body(null);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    }
+  }
+
+//  /**
+//   * 결제 정보의 일관성을 검증
+//   *
+//   * @param ptPayment 결제 정보
+//   * @return 상태 메시지
+//   * @throws CustomException 결제 정보가 일치하지 않는 경우
+//   */
+//  @PostMapping("/check")
+//  public ResponseEntity<String> verifyPayment(@RequestBody PtPayment ptPayment) {
+//    try {
+//      ptPaymentHttpTestService.verifyPayment(ptPayment);
+//      return ResponseEntity.ok("결제 정보가 일치합니다.");
+//    } catch (CustomException e) {
+//      return ResponseEntity.status(e.getErrorType().getHttpStatus()).body(e.getMessage());
+//    }
+//  }
+
+  /**
+   * 결제 정보를 UserPt에 저장
+   *
+   * @param ptPayment 결제 정보
+   * @return 상태 메시지
+   */
+  @PostMapping("/save-UserPt")
+  public ResponseEntity<String> savePaymentToUserPt(@RequestBody PtPayment ptPayment) {
+    try {
+      ptPaymentHttpTestService.savePaymentToUserPt(ptPayment);
+      return ResponseEntity.ok("결제 정보가 UserPt에 저장되었습니다.");
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("결제 정보 저장 중 오류 발생");
+    }
+  }
+
+  /**
+   * 결제 완료 페이지
+   *
+   * @param ptPayment 결제 정보
+   * @return 결제 완료 메시지
+   */
+  @PostMapping("/completePage")
+  public ResponseEntity<String> paymentCompletePage(@RequestBody PtPayment ptPayment) {
+    try {
+      String message = ptPaymentHttpTestService.PaymentCompletePage(ptPayment);
+      return ResponseEntity.ok(message);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("결제 완료 페이지 생성 중 오류 발생");
+    }
+  }
+
+  /**
+   * 결제를 완료하고 최종 결제 정보를 저장하며 결제 완료 페이지를 생성
+   *
+   * @param request 결제 요청 정보
+   * @param userId  유저 ID
+   * @return 결제 완료 메시지
+   */
+  @PostMapping("/all-complete")
+  public ResponseEntity<String> completeAllPayment(@RequestBody PtPaymentRequest request,
+      @RequestParam Long userId) {
+    try {
+
+      PtPayment ptPayment = ptPaymentHttpTestService.completePayment(request, userId);
+
+      ptPaymentHttpTestService.savePaymentToUserPt(ptPayment);
+
+      String message = ptPaymentHttpTestService.PaymentCompletePage(ptPayment);
+
+      logger.info("결제 완료: 사용자 ID = , 요청 정보 = ", userId, request);
+      return ResponseEntity.ok(message);
+    } catch (CustomException e) {
+      logger.error("결제 처리 중 오류 발생: ", e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    } catch (Exception e) {
+      logger.error("예상치 못한 오류 발생: ", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("결제 처리 중 오류가 발생했습니다.");
+    }
   }
 }
+

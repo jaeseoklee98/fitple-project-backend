@@ -7,6 +7,7 @@ import com.sparta.fitpleprojectbackend.ptsesson.dto.PtTotalAmountRequest;
 import com.sparta.fitpleprojectbackend.ptsesson.dto.PtTotalAmountResponse;
 import com.sparta.fitpleprojectbackend.ptsesson.entity.PtInfomation;
 import com.sparta.fitpleprojectbackend.ptsesson.entity.PtPayment;
+import com.sparta.fitpleprojectbackend.ptsesson.enums.PaymentType;
 import com.sparta.fitpleprojectbackend.ptsesson.enums.PtTimes;
 import com.sparta.fitpleprojectbackend.ptsesson.repository.PtInformationRepository;
 import com.sparta.fitpleprojectbackend.ptsesson.service.PtPaymentService;
@@ -18,9 +19,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -139,7 +143,24 @@ public class PtPaymentController {
           .body(null);
     }
   }
+
+  /**
+   * 결제 승인 및 상태 업데이트
+   *
+   * @param ptPaymentId 결제 ID
+   * @param paymentType 결제 수단
+   * @return 승인된 결제 정보
+   */
+  @PutMapping("/{ptPaymentId}")
+  public ResponseEntity<PtPayment> approvePayment(
+      @PathVariable Long ptPaymentId,
+      @RequestParam PaymentType paymentType) {
+
+    PtPayment approvedPayment = ptPaymentService.approvePayment(ptPaymentId, paymentType);
+    return ResponseEntity.ok(approvedPayment);
+  }
 }
+
 
 
 

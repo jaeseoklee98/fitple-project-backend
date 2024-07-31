@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class PtPaymentHttpTestService {
 
+  private static final int MAX_RETRY_ATTEMPTS = 5;
   private static final String TEST = "testId"; // 테스트용
   private static final Logger logger = LoggerFactory.getLogger(PtPaymentService.class);
   private final PtPaymentRepository ptPaymentRepository;
@@ -175,11 +176,6 @@ public class PtPaymentHttpTestService {
     try {
       logger.info("결제 요청 전 정보 저장 시작: 사용자 ID = , 요청 정보 = ", userId, request);
 
-      if (amount <= 0) {
-
-        throw new CustomException(ErrorType.INVALID_INPUT);
-      }
-
       PtPaymentValidateRequest validateRequest = validateTrainerAndUser(request.getTrainerId(),
           userId);
       Trainer trainer = validateRequest.getTrainer();
@@ -229,64 +225,204 @@ public class PtPaymentHttpTestService {
         throw new IllegalArgumentException("지원하지 않는 결제 수단입니다: " + paymentType);
     }
   }
+//  /**
+//   * 결제 정보 검증 및 상태 업데이트
+//   *
+//   * @param ptpaymentId 결제 ID
+//   * @return 승인된 결제 정보
+//   */
+//  @Transactional
+//  public PtPayment approvePayment(Long ptpaymentId) {
+//
+//    PtPayment ptPayment = ptPaymentRepository.findById(ptpaymentId)
+//        .orElseThrow(() -> new CustomException(ErrorType.PAYMENT_NOT_FOUND));
+//
+//    // API 결제 데이터 테스트용
+//    PtPayment apiPayment = new PtPayment(
+//        new Trainer(),
+//        new User(),
+//        PtTimes.SIXTY_TIMES,
+//        PaymentType.UNDEFINED,
+//        100.0,
+//        PaymentStatus.PENDING,
+//        LocalDateTime.now().minusDays(1),
+//        LocalDateTime.now().plusDays(30),
+//        true
+//    );
+//
+//    if (!ptPayment.getTrainer().equals(apiPayment.getTrainer()) ||
+//        !ptPayment.getUser().equals(apiPayment.getUser()) ||
+//        !ptPayment.getPtTimes().equals(apiPayment.getPtTimes()) ||
+//        ptPayment.getAmount() != apiPayment.getAmount() ||
+//        ptPayment.isMembership() != apiPayment.isMembership()) {
+//      throw new CustomException(ErrorType.PAYMENT_MISMATCH);
+//    }
+//
+//    return savePayment(ptPayment);
+//  }
+
+//  /**
+//   * 결제 상태를 APPROVED 변경
+//   *
+//   * @param ptPayment 결제 정보
+//   * @return 승인된 결제 정보
+//   */
+//  public PtPayment savePayment(PtPayment ptPayment) {
+//    PtPayment savedPayment = new PtPayment(
+//        ptPayment.getTrainer(),
+//        ptPayment.getUser(),
+//        ptPayment.getPtTimes(),
+//        ptPayment.getPaymentType(),
+//        ptPayment.getAmount(),
+//        PaymentStatus.APPROVED,
+//        ptPayment.getPaymentDate(),
+//        ptPayment.getExpiryDate(),
+//        ptPayment.isMembership()
+//    );
+//
+//    return ptPaymentRepository.save(savedPayment);
+//  }
 
   /**
-   * 결제 정보 검증 및 상태 업데이트
+   * 결제를 승인함 (toss 예정)
    *
-   * @param paymentId 결제 ID
-   * @return 승인된 결제 정보
+   * @param userId 유저 ID
+   * @param amount 결제 금액
+   * @return 결제 승인 여부
    */
-  @Transactional
-  public PtPayment approvePayment(Long paymentId) {
-
-    PtPayment dbPayment = ptPaymentRepository.findById(paymentId)
-        .orElseThrow(() -> new CustomException(ErrorType.PAYMENT_NOT_FOUND));
-
-    // API 결제 데이터 테스트용
-    PtPayment apiPayment = new PtPayment(
-        new Trainer(),
-        new User(),
-        PtTimes.SIXTY_TIMES,
-        PaymentType.UNDEFINED,
-        100.0,
-        PaymentStatus.PENDING,
-        LocalDateTime.now().minusDays(1),
-        LocalDateTime.now().plusDays(30),
-        true
-    );
-
-    if (!dbPayment.getTrainer().equals(apiPayment.getTrainer()) ||
-        !dbPayment.getUser().equals(apiPayment.getUser()) ||
-        !dbPayment.getPtTimes().equals(apiPayment.getPtTimes()) ||
-        dbPayment.getAmount() != apiPayment.getAmount() ||
-        dbPayment.isMembership() != apiPayment.isMembership()) {
-      throw new CustomException(ErrorType.PAYMENT_MISMATCH);
-    }
-
-    return savePayment(dbPayment);
+  public boolean approvePayment(Long userId, double amount) {
+    logger.info("결제 승인 완료: {}", amount);
+    return true;
   }
 
+  /**
+   * 결제를 완료 최종 결제 정보를 저장
+   *
+   * @param request 결제 요청 정보
+   * @param userId  유저 ID
+   * @return 저장된 결제 정보
+   * @throws CustomException 결제 처리 중 오류 발생 시
+   */
+  @Transactional
+  public PtPayment completePayment(PtPaymentRequest request, Long userId) {
+    try {
+      logger.info("결제 완료 시작: 사용자 ID = , 요청 정보 = ", userId, request);
+
+      validateTrainerAndUser(request.getTrainerId(), userId);
+      checkDuplicatePt(request.getTrainerId(), userId);
+
+      Trainer trainer = trainerRepository.findById(request.getTrainerId())
+          .orElseThrow(() -> new CustomException(ErrorType.TRAINER_NOT_FOUND));
+
+      double totalAmount = 600;
+
+      boolean paymentApproved = false;
+      int attempt = 0;
+
+      while (attempt < MAX_RETRY_ATTEMPTS && !paymentApproved) {
+        try {
+          paymentApproved = approvePayment(userId, totalAmount);
+        } catch (Exception e) {
+          attempt++;
+          logger.error("실패 재시도 중... 시도 횟수: ", attempt, e);
+
+          if (attempt >= MAX_RETRY_ATTEMPTS) {
+
+            throw new CustomException(ErrorType.PAYMENT_FAILED);
+          }
+        }
+      }
+
+      if (!paymentApproved) {
+        throw new CustomException(ErrorType.PAYMENT_APPROVAL_FAILED);
+      }
+
+      PtPayment ptPayment = new PtPayment(
+          trainer,
+          userRepository.findById(userId)
+              .orElseThrow(() -> new CustomException(ErrorType.USER_NOT_FOUND)),
+          request.getPtTimes(),
+          request.getPaymentType(),
+          totalAmount,
+          PaymentStatus.COMPLETED,
+          LocalDateTime.now(),
+          LocalDateTime.now().plusDays(request.getPtTimes().getTimes() / 30),
+          request.isMembership()
+      );
+
+      PtPayment savedPayment = ptPaymentRepository.save(ptPayment);
+
+      logger.info("결제 완료 및 저장 완료: ", savedPayment);
+
+      return savedPayment;
+    } catch (Exception e) {
+
+      throw new CustomException(ErrorType.PAYMENT_FAILED);
+    }
+  }
+
+//  /**
+//   * 결제 정보의 일관성을 검증
+//   *
+//   * @param ptPayment 결제 정보
+//   * @throws CustomException 결제 정보가 일치하지 않는 경우
+//   */
+//  public void verifyPayment(PtPayment ptPayment) {
+//    PtPayment existingPayment = ptPaymentRepository.findById(ptPayment.getId())
+//        .orElseThrow(() -> new CustomException(ErrorType.PAYMENT_NOT_FOUND));
+//
+//    if (!existingPayment.equals(ptPayment)) {
+//      throw new CustomException(ErrorType.PAYMENT_MISMATCH);
+//    }
+//  }
 
   /**
-   * 결제 상태를 APPROVED 변경
+   * 결제 정보를 UserPt에 저장
    *
    * @param ptPayment 결제 정보
-   * @return 승인된 결제 정보
    */
-  private PtPayment savePayment(PtPayment ptPayment) {
-    PtPayment savedPayment = new PtPayment(
+  public void savePaymentToUserPt(PtPayment ptPayment) {
+    UserPt userPt = new UserPt(
         ptPayment.getTrainer(),
         ptPayment.getUser(),
         ptPayment.getPtTimes(),
         ptPayment.getPaymentType(),
         ptPayment.getAmount(),
-        PaymentStatus.APPROVED,
+        ptPayment.getPaymentStatus(),
+        ptPayment.getPaymentDate(),
+        ptPayment.getExpiryDate(),
+        ptPayment.isMembership(),
+        true
+    );
+    userPtRepository.save(userPt);
+  }
+
+  /**
+   * 결제 완료 페이지
+   *
+   * @param ptPayment 결제 정보
+   * @return 결제 완료 메시지
+   */
+  public String PaymentCompletePage(PtPayment ptPayment) {
+    return String.format(
+        "결제가 성공적으로 완료되었습니다!\n" +
+            "트레이너: %s\n" +
+            "유저: %s\n" +
+            "PT 횟수: %d\n" +
+            "금액: %.2f\n" +
+            "결제 일자: %s\n" +
+            "만료 일자: %s\n" +
+            "회원권: %b",
+        ptPayment.getTrainer().getTrainerName(),
+        ptPayment.getUser().getUserName(),
+        ptPayment.getPtTimes().getTimes(),
+        ptPayment.getAmount(),
         ptPayment.getPaymentDate(),
         ptPayment.getExpiryDate(),
         ptPayment.isMembership()
     );
-
-    return ptPaymentRepository.save(savedPayment);
   }
 }
+
+
 
