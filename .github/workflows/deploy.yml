@@ -3,7 +3,7 @@ on:
     branches: [ main ] # 해당 branch에 push 되었을 경우
 
 env:
-  DOCKER_IMAGE_TAG_NAME: {{이미지 태그명}}
+  DOCKER_IMAGE_TAG_NAME: my-docker-image
 
 jobs:
   build-and-docker-push:
