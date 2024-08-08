@@ -64,7 +64,7 @@ jobs:
 
 
   deploy-to-ec2:
-    needs: build-and-docker-push # 위의 build-and-docker-push 이 끝나고 실행
+    needs: build-and-docker-push
     runs-on: ubuntu-latest
 
     steps:
@@ -81,10 +81,14 @@ jobs:
               sudo docker stop $CONTAINER_ID
               sudo docker rm $CONTAINER_ID
             fi
-            # 여기서의 환경 변수도 여러분 상황에 맞게 작성하시면 됩니다!!!
+            # Docker 이미지 풀
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_TAG_NAME }}:latest
+            
+            # 컨테이너 실행
             sudo docker run -d -p 8080:8080 \
-                -e DB_USERNAME=${{secrets.DB_USERNAME}} \
-                -e DB_PASSWORD=${{secrets.DB_PASSWORD}} \
-                -e DB_URL=${{secrets.DB_URL}} \
+                -e SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.DB_URL }}:3306/fitple_project \
+                -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
+                -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
+                -e JWT_SECRET=b1ee7f2bb90b78b2274f86936a50c6619fdd96ab9ca837f7902b3f53cc8992ff4b45a58b91cfd1103f85281ea694151d7e83ea0e36d91e022d124223317caf07 \
+                -e SERVER_PORT=8080 \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_TAG_NAME }}:latest
