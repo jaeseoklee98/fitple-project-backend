@@ -1,7 +1,7 @@
 version: '3'
 services:
   web:
-    image: jslee4577/my-docker-image:latest
+    image: jslee4577/fitple-project:latest
     container_name: web-container
     ports:
       - "8080:8080"
